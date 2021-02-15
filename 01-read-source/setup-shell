@@ -1,0 +1,353 @@
+#!/bin/bash
+
+while [ ! -f /opt/instruqt/bootstrap/host-bootstrap-completed ]
+do
+    echo "Waiting for Instruqt to finish booting the VM"
+    sleep 1
+done
+
+echo "cd /root/app" >> .bashrc
+mkdir /root/app && cd /root/app
+
+cat <<EOF > Dockerfile
+FROM golang:1.15 as build
+
+WORKDIR /src
+COPY go.* ./
+RUN go mod download
+
+COPY . .
+RUN go build -o /go/bin/main 
+
+FROM gcr.io/distroless/static:nonroot 
+COPY --from=build /go/bin/main /app/
+COPY index.html /app/
+WORKDIR /app
+ENTRYPOINT ["/app/main"]
+EOF
+
+cat <<EOF > index.html
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@tailwindcss/typography@0.2.x/dist/typography.min.css" />
+  <script type="text/javascript">
+    //<![CDATA[
+      function sleep(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+      }
+      function stop(event){
+          var button = document.querySelector("button").
+              classList.add("opacity-50", "shadow-none")        
+          sleep(1000).then(() => document.location.reload())
+          fetch("/stop")
+      }
+    //]]>
+    </script>
+</head>
+<body>
+    <article class="prose prose-sm container mx-auto">
+        <h1>Inspect</h1>        
+        <h2>About this Container</h2>
+        <table class="table-fixed">
+            <tbody>
+                <tr>
+                    <th>Total Memory</th>
+                    <td>{{human .TotalMemory}}</td>
+                </tr>
+                <tr>
+                    <th>Uptime</th>
+                    <td>{{ .Uptime }}</td>
+                </tr>
+                {{if .OnGoogleCloud}}
+                <tr>
+                  <th>vCPUs</th>
+                  <td>{{.VCPU}}</td>
+                </tr>
+                <tr>
+                  <th>Region</th>
+                  <td>{{.Region}}</td>
+                </tr>
+                <tr>
+                  <th>Service account</th>
+                  <td>{{.ServiceAccount}}</td>
+                </tr>
+                <tr>
+                  <th>Instance ID</th>
+                  <td style="color:#{{.InstanceID}}; border: 2px solid #{{.InstanceID}}">{{.InstanceID}}</td>
+                </tr>
+                <tr>
+                  <th>Project</th>
+                  <td>{{.ProjectID}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+
+        <div class="m-auto">
+          <button class="block bg-red-600 shadow-lg hover:shadow-none hover:bg-red-900 text-white uppercase text-md mx-auto p-4 rounded"  onClick="javascript:stop()">Stop this process</button>
+      </div>
+
+        <h2>Environment Variables</h2>
+        <table class="table-fixed">
+            <thead>
+              <tr>
+                <th class="w-1/8">Key</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range \$key, \$value := .Environ}}
+              <tr>
+                  <td>{{\$key}}</td>
+                  <td>{{\$value}}</td>
+              </tr>                
+              {{end}}
+            </tbody>
+        </table>
+        
+        <h2>Request Headers</h2>
+        <table class="table-fixed">
+            <thead>
+              <tr>
+                <th class="w-1/8">Key</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range \$key, \$value := .Headers}}
+              <tr>
+                  <td>{{\$key}}</td>
+                  <td>{{\$value}}</td>
+              </tr>                
+              {{end}}
+            </tbody>
+        </table>
+</article>
+</body>
+</html>
+EOF
+
+cat <<EOF > main.go
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"text/template"
+
+	"cloud.google.com/go/compute/metadata"
+	sigar "github.com/cloudfoundry/gosigar"
+	human "github.com/dustin/go-humanize"
+)
+
+type Data struct {
+	Environ        map[string]string
+	Headers        map[string]string
+	TotalMemory    uint64
+	VCPU           int
+	FsList         sigar.FileSystemList
+	Uptime         string
+	OnGoogleCloud  bool
+	ServiceAccount string
+	Region         string
+	InstanceID     string
+	ProjectID      string
+}
+
+func main() {
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	http.HandleFunc("/stop",
+		func(w http.ResponseWriter, r *http.Request) {
+			os.Exit(1)
+		})
+
+	http.HandleFunc("/",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/" {
+				http.NotFound(w, r)
+				return
+			}
+
+			tmpl := template.Must(template.New("index.html").
+				Funcs(template.FuncMap{
+					"human": func(b uint64) string {
+						return human.IBytes(b)
+					}}).ParseFiles("index.html"))
+
+			data := Data{
+				Environ: make(map[string]string),
+				Headers: make(map[string]string),
+			}
+			for _, e := range os.Environ() {
+				r := strings.SplitN(e, "=", 2)
+				if len(r) == 2 {
+					v := r[1]
+					if len(v) > 75 {
+						v = v[:75] + "..."
+					}
+					data.Environ[r[0]] = v
+				}
+			}
+			headerKeys := []string{}
+			for k := range r.Header {
+				headerKeys = append(headerKeys, k)
+			}
+			sort.Strings(headerKeys)
+			for _, k := range headerKeys {
+				vals := r.Header[k]
+				v := strings.Join(vals, ", ")
+				if len(v) > 75 {
+					v = v[:75] + "..."
+				}
+				data.Headers[k] = v
+			}
+
+			memlimit, err := CGroupMemory()
+			if err != nil {
+				log.Printf("%v+", err)
+				memory := sigar.Mem{}
+				memory.Get()
+				memlimit = memory.Total
+			}
+			data.TotalMemory = memlimit
+
+			data.VCPU, _ = CGroupCPUShares()
+
+			data.Uptime = Uptime()
+
+			if metadata.OnGCE() {
+				data.OnGoogleCloud = true
+				data.ServiceAccount, _ = metadata.Email("default")
+				data.InstanceID, _ = metadata.InstanceID()
+				if len(data.InstanceID) > 6 {
+					data.InstanceID = data.InstanceID[len(data.InstanceID)-6:]
+				}
+
+				data.Region, err = metadata.NewClient(nil).Get("instance/region")
+				parts := strings.Split(data.Region, "/")
+				data.Region = parts[len(parts)-1]
+				data.Region = strings.TrimSpace(data.Region)
+
+				data.ProjectID, _ = metadata.ProjectID()
+			}
+
+			err = tmpl.Execute(w, data)
+			if err != nil {
+				log.Printf("%v+", err)
+			}
+	
+		})
+
+	log.Println("Listening on port: " + port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func CGroupCPUShares() (int, error) {
+	bs, err := ioutil.ReadFile("/sys/fs/cgroup/cpu/cpu.shares")
+	if err != nil {
+		return 0, err
+	}
+	shares, err := strconv.Atoi(
+		strings.TrimSpace(string(bs)),
+	)
+	if err != nil {
+		return 0, err
+	}
+	return shares / 1024, nil
+}
+
+func CGroupMemory() (uint64, error) {
+	bs, err := ioutil.ReadFile("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+	if err != nil {
+		return 0, err
+	}
+	limit, err := strconv.ParseUint(
+		strings.TrimSpace(string(bs)),
+		10,
+		64,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return limit, nil
+}
+
+func Uptime() string {
+	buf := new(bytes.Buffer)
+	w := bufio.NewWriter(buf)
+	uptime := sigar.Uptime{}
+	uptime.Get()
+	time := uint64(uptime.Length)
+
+	days := time / (60 * 60 * 24)
+
+	if days != 0 {
+		s := ""
+		if days > 1 {
+			s = "s"
+		}
+		fmt.Fprintf(w, "%d day%s, ", days, s)
+	}
+
+	hours := time / (60 * 60)
+	hours %= 24
+
+	if hours != 0 {
+		s := ""
+		if hours > 1 {
+			s = "s"
+		}
+		fmt.Fprintf(w, "%d hour%s, ", hours, s)
+	}
+
+	minutes := time / 60
+	minutes %= 60
+
+	if minutes != 0 {
+		s := ""
+		if minutes > 1 {
+			s = "s"
+		}
+		fmt.Fprintf(w, "%d minute%s, ", minutes, s)
+	}
+
+	seconds := time % 60
+	s := ""
+	if seconds > 1 {
+		s = "s"
+	}
+	fmt.Fprintf(w, "%d second%s", seconds, s)
+
+	w.Flush()
+	return buf.String()
+}
+EOF
+
+cat <<EOF > go.mod
+module github.com/wietsevenema/inspect
+
+go 1.15
+
+require (
+	cloud.google.com/go v0.72.0
+	github.com/cloudfoundry/gosigar v1.1.0
+	github.com/dustin/go-humanize v1.0.0
+)
+EOF

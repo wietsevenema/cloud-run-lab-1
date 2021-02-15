@@ -1,0 +1,195 @@
+slug: cloud-run-lab-1
+id: 5ynkkohxmi5r
+type: track
+title: Cloud Run Lab 1
+teaser: Build and deploy a container
+description: ""
+icon: https://storage.googleapis.com/instruqt-frontend/img/tracks/docker.png
+tags:
+- basic
+- cloud run
+owner: binxio
+developers:
+- wietsevenema@binx.io
+private: true
+published: false
+challenges:
+- slug: 01-read-source
+  id: 8mliekvyyjpb
+  type: challenge
+  title: Introduction
+  assignment: |
+    Explore the source code here and press *Check* when you have. You don't need
+    to read every line, just make sure you have a mental model of what's here. Reading
+    this description might be enough.
+
+    This is what you are looking at: it's a Go app that shows
+    one page with information about the server it runs on.
+
+    - **index.html**: A html template for the page
+    - **main.go**: The main program (it starts an HTTP server)
+    - **go.mod**: A list of dependencies
+    - **Dockerfile**: A recipe you use to build and package the source into a container image using Docker
+  notes:
+  - type: text
+    contents: |
+      **Welcome to your lab: Introduction to Cloud Run**
+
+      Use the **<** and **>** buttons to learn more about your assignment!
+  - type: text
+    contents: |
+      **This is Google Cloud Run**
+
+      IMG: Write app, package, deploy
+  - type: text
+    contents: |
+      **Cloud Run uses Artifact Registry to stage container images**
+
+      IMG: AR as intermediary storage
+  - type: text
+    contents: |
+      **Your first tasks are to:**
+
+      1. *Create a repository* in Artifact Registry
+      2. *Build a container image* using Docker
+      3. *Push the container image* to the repository
+      4. *Deploy* the container image to Cloud Run
+
+      When that's done, you'll practice making and deploying changes and
+      experience the *source-based* workflow.
+  tabs:
+  - title: Editor
+    type: code
+    hostname: shell
+    path: /root/app
+  difficulty: basic
+  timelimit: 900
+- slug: 02-create-repo
+  id: k0i01yaq5uhz
+  type: challenge
+  title: Create a docker repository
+  assignment: |
+    A docker repository on Artifact Registry is private by default,
+    and you can customize access control using Cloud IAM.
+
+    First, create one using this command:
+    ```
+    gcloud artifacts repositories create \
+      --repository-format docker \
+      repo
+    ```
+  notes:
+  - type: text
+    contents: |
+      Artifact Registry is a universal package manager on Google Cloud
+      IMG: UNiversal package manger.
+  - type: text
+    contents: |
+      **Create a Docker repository on Artifact Registry**
+
+      Your task is to create a Docker repository. Cloud Run can (only) pull container images
+      from here.
+  tabs:
+  - title: shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 900
+- slug: 03-build-image
+  id: weho2mgckpyp
+  type: challenge
+  title: Build the container image
+  assignment: |
+    Build a container image using Docker. First,
+    set the image URL as an environment variable:
+
+    ```
+    PROJECT=$(gcloud config get-value project)
+    IMAGE=us-docker.pkg.dev/$PROJECT/repo/app
+
+    ```
+
+    Now, use docker to build the container image and
+    tag it with the image URL.
+
+    ```
+    docker build . --tag $IMAGE
+    ```
+
+    You'll push this image to Artifact Registry in the next
+    step.
+  notes:
+  - type: text
+    contents: |
+      **Build the container image using Docker**
+
+      In this step, you'll build the container image using
+      Docker.
+  tabs:
+  - title: shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 900
+- slug: 04-push-image
+  id: 30ixfbt1eglo
+  type: challenge
+  title: Push the container image
+  assignment: |
+    Authenticate Docker to push to Artifact Registry. You'll only need
+    to do this once as you're telling Docker to use `gcloud` to authenticate
+    if you push to `us-docker.pkg.dev`, and it'll remember it next time.
+
+    ```
+    gcloud auth configure-docker us-docker.pkg.dev
+    ```
+
+    Push the container image to Artifact Registry
+
+    ```
+    docker push $IMAGE
+    ```
+  notes:
+  - type: text
+    contents: |
+      **Authenticate Docker and push the container image**
+
+      First, authenticate Docker to push to Artifact Registry using
+      a gcloud helper script, then push the image.
+  tabs:
+  - title: shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 900
+- slug: 05-run-deploy
+  id: igztpdxxpmka
+  type: challenge
+  title: Deploy to Cloud Run
+  assignment: |
+    Now that you pushed the container image
+    to Artifact Registry, you can deploy it to Cloud Run!
+
+    The next command deploys the container image and returns
+    an HTTPS url.
+
+    ```
+    gcloud run deploy \
+      --image $IMAGE \
+      --allow-unauthenticated \
+      app
+    ```
+
+    Make sure to visit the *.run.app URL that is returned by
+    the command.
+  notes:
+  - type: text
+    contents: |
+      Deploy to Cloud Run
+  tabs:
+  - title: shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 900
+checksum: "12879221848561172620"

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+PATH=$PATH:/snap/bin
+
+source /etc/profile.d/instruqt-env.sh
+
+echo $INSTRUQT_GCP_PROJECT_CLOUD_RUN_LAB_1_SERVICE_ACCOUNT_KEY | base64 -d > /tmp/.sa.json
+gcloud auth activate-service-account --key-file /tmp/.sa.json && rm /tmp/.sa.json
+
+gcloud config set project $INSTRUQT_GCP_PROJECT_CLOUD_RUN_LAB_1_PROJECT_ID
+gcloud config set run/platform managed
+gcloud config set run/region us-central1
+gcloud config set artifacts/location us
+gcloud config set survey/disable_prompts True
+
+docker pull golang:1.15

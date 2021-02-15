@@ -1,0 +1,11 @@
+version: "2"
+virtualmachines:
+- name: shell
+  image: instruqt/docker-1903
+  shell: /bin/bash
+  machine_type: n1-standard-1
+gcp_projects:
+- name: cloud-run-lab-1
+  services:
+  - artifactregistry.googleapis.com
+  - run.googleapis.com
