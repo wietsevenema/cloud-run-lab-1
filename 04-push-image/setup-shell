@@ -4,3 +4,5 @@ cat <<EOF >> /root/.bashrc
 export PROJECT=\$(gcloud config get-value project)
 export IMAGE=us-docker.pkg.dev/\$PROJECT/repo/app
 EOF
+
+snap install jq

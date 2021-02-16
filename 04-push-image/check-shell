@@ -1,0 +1,7 @@
+#!/bin/bash 
+
+COUNT=$(gcloud artifacts docker images list --format json | jq length)
+if [ "$COUNT" -eq "0" ]; then
+    fail-message "I expected to find a container image in the Artifact Registry repository us-docker.pkg/PROJECT/repo"
+    exit 1
+fi

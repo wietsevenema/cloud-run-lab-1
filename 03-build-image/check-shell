@@ -1,0 +1,6 @@
+#!/bin/bash 
+
+ID=$(docker images -q --filter=reference=us-docker.pkg.dev/*/repo/app)
+if [ -z "$ID" ]; then
+    fail-message "I expected a container image with the tag \$IMAGE. Did you run docker build?"
+fi

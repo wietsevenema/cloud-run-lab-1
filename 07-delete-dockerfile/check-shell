@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if [ -f "/root/app/Dockerfile" ]; then
+    fail-message "Can you check if the Dockerfile is really gone?"
+fi

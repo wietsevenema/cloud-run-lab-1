@@ -1,0 +1,6 @@
+#!/bin/bash
+
+gcloud run services describe app
+if [ $? -ne 0 ]; then
+    fail-message "I expected a Cloud Run service called 'app', can you try again?"  
+fi

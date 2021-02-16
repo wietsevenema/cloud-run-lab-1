@@ -1,0 +1,6 @@
+#!/bin/bash
+
+OUTPUT=$(gcloud run services describe app --format json | grep cloud-run-source-deploy)
+if [ -z "$OUTPUT" ] ; then
+    fail-message "The last revision was not deployed from source"
+fi

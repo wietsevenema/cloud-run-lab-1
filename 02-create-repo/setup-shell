@@ -12,5 +12,6 @@ gcloud config set run/platform managed
 gcloud config set run/region us-central1
 gcloud config set artifacts/location us
 gcloud config set survey/disable_prompts True
+gcloud config set artifacts/repository repo
 
 docker pull golang:1.15

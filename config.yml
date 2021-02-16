@@ -8,4 +8,5 @@ gcp_projects:
 - name: cloud-run-lab-1
   services:
   - artifactregistry.googleapis.com
+  - cloudbuild.googleapis.com
   - run.googleapis.com

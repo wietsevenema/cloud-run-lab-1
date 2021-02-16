@@ -1,0 +1,5 @@
+COUNT=$(gcloud run revisions list --format json | jq length)
+if [ "$COUNT" -lt "2" ]; then
+    fail-message "I expected a new revision, did you deploy or update the service?"
+    exit 1
+fi

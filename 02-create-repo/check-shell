@@ -1,0 +1,6 @@
+#!/bin/bash
+
+gcloud artifacts repositories describe repo
+if [ $? -ne 0 ]; then
+    fail-message "I expected a repository called 'repo', can you try again?"  
+fi
