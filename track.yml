@@ -11,7 +11,7 @@ tags:
 owner: binxio
 developers:
 - wietsevenema@binx.io
-private: false
+private: true
 published: true
 challenges:
 - slug: 01-read-source
@@ -183,6 +183,7 @@ challenges:
       app
     ```
 
+    ## Visit the URL
     Make sure to visit the *.run.app URL that is returned by
     the command.
   notes:
@@ -299,4 +300,4 @@ challenges:
     hostname: shell
   difficulty: basic
   timelimit: 360
-checksum: "961864017346950973"
+checksum: "9063748517890350627"
