@@ -1,0 +1,317 @@
+slug: cloud-run-lab-1
+id: 5ynkkohxmi5r
+type: track
+title: Cloud Run Lab 1
+teaser: Construire et déployer un conteneur
+description: ""
+icon: https://storage.googleapis.com/instruqt-frontend/img/tracks/docker.png
+tags:
+- basic
+- cloud run
+owner: binxio
+developers:
+- wietsevenema@binx.io
+private: true
+published: true
+challenges:
+- slug: 01-read-source
+  id: 8mliekvyyjpb
+  type: challenge
+  title: Introduction
+  assignment: |
+    Explorez le code source ici et appuyez sur *Vérifier* lorsque 
+    vous avez terminé. Vous n'avez pas besoin de lire chaque ligne, 
+    assurez-vous simplement d'avoir un modèle mental de ce qui est 
+    ici. La lecture de cette description pourrait suffire.
+
+    Voici ce que vous regardez: c'est une application Go qui montre
+    une page contenant des informations sur le serveur sur lequel 
+    il s'exécute.
+
+    - **index.html**: Un modèle html pour la page
+    - **main.go**: Le programme principal (il démarre un serveur HTTP)
+    - **go.mod**: Une liste de dépendances
+    - **Dockerfile**: Une recette que vous utilisez pour créer et 
+    empaqueter la source dans une image de conteneur à l'aide de Docker
+  notes:
+  - type: text
+    contents: |
+      **Bienvenue dans votre laboratoire: Introduction à Cloud Run**
+
+      Utilisez les boutons **<** et **>** pour en savoir plus sur votre mission!
+  - type: text
+    contents: |
+      **C'est Google Cloud Run**
+
+      ![](https://binxio-static-assets.firebaseapp.com/instruqt/cloud-run-lab-1/cloud-run.png)
+  - type: text
+    contents: |
+      **Cloud Run utilise Artifact Registry pour démarrer des images de conteneurs**
+
+      ![](https://binxio-static-assets.firebaseapp.com/instruqt/cloud-run-lab-1/ar-to-cr.png)
+  - type: text
+    contents: |
+      **Vos premières tâches sont de:**
+
+      1. *Créer un référentiel* dans Artifact Registry
+      2. *Construisez une image de conteneur* en utilisant Docker
+      3. *Poussez l'image du conteneur* dans le référentiel
+      4. *Déployez* l'image du conteneur sur Cloud Run
+
+      Lorsque cela sera fait, vous vous exercerez à apporter et 
+      à déployer des modifications et découvrez le flux de travail 
+      *basé sur la source*.
+  tabs:
+  - title: Editeur
+    type: code
+    hostname: shell
+    path: /root/app
+  difficulty: basic
+  timelimit: 360
+- slug: 02-create-repo
+  id: k0i01yaq5uhz
+  type: challenge
+  title: Créer un référentiel Docker
+  assignment: |
+    Un référentiel Docker sur Artifact Registry est privé par défaut.
+    Vous pouvez personnaliser le contrôle d'accès à l'aide de Cloud IAM.
+
+    Tout d'abord, créez-en un à l'aide de cette commande:
+    ```
+    gcloud artifacts repositories create \
+      --repository-format docker \
+      repo
+    ```
+  notes:
+  - type: text
+    contents: |
+      **Artifact Registry est un gestionnaire de packages universel sur Google Cloud**
+
+      ![](https://binxio-static-assets.firebaseapp.com/instruqt/cloud-run-lab-1/ar-universal.png)
+  - type: text
+    contents: |
+      **Créer un référentiel Docker sur Artifact Registry**
+
+      Votre tâche consiste à créer un référentiel Docker. 
+      Cloud Run peut (uniquement) extraire des images de conteneurs 
+      à partir de là.
+  tabs:
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 360
+- slug: 03-build-image
+  id: weho2mgckpyp
+  type: challenge
+  title: Construire l'image du conteneur
+  assignment: |
+    Créez une image de conteneur à l'aide de Docker. 
+    Tout d'abord, définissez l'URL de l'image en tant que variable
+    d'environnement:
+
+    ```
+    PROJECT=$(gcloud config get-value project)
+    IMAGE=us-docker.pkg.dev/$PROJECT/repo/app
+
+    ```
+
+    Maintenant, utilisez docker pour créer l'image du conteneur et 
+    étiquetez-la avec l'URL de l'image.
+
+    ```
+    docker build . --tag $IMAGE
+    ```
+
+    Vous allez pousser cette image vers le registre des artefacts à 
+    l'étape suivante.
+  notes:
+  - type: text
+    contents: |
+      **Créer l'image du conteneur à l'aide de Docker**
+
+      Dans cette étape, vous allez créer l'image du conteneur à l'aide 
+      de Docker.
+  tabs:
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 360
+- slug: 04-push-image
+  id: 30ixfbt1eglo
+  type: challenge
+  title: Pousser l'image du conteneur
+  assignment: |
+    Tout d'abord, dites à Docker d'utiliser gcloud pour l'authentification
+
+    Vous n'aurez besoin de le faire qu'une seule fois car vous dites à 
+    Docker d'utiliser **gcloud** pour vous authentifier si vous poussez 
+    vers **us-docker.pkg.dev**, et il s'en souviendra la prochaine fois.
+
+    ```
+    gcloud auth configure-docker us-docker.pkg.dev
+    ```
+
+    Poussez l'image du conteneur vers Artifact Registry
+
+    ```
+    docker push $IMAGE
+    ```
+  notes:
+  - type: text
+    contents: |
+      **Poussez l'image du conteneur vers Artifact Registry**
+
+      Tout d'abord, dites à Docker de s'authentifier à l'aide de gcloud 
+      lorsque vous parlez à Artifact Registry, puis transférez l'image.
+  tabs:
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 360
+- slug: 05-run-deploy
+  id: igztpdxxpmka
+  type: challenge
+  title: Déployer sur Cloud Run
+  assignment: |
+    Maintenant que vous avez transféré l'image du conteneur vers 
+    Artifact Registry, vous pouvez la déployer sur Cloud Run!
+
+    La commande suivante déploie l'image du conteneur et renvoie
+    une URL HTTPS.
+
+    ```
+    gcloud run deploy \
+      --image $IMAGE \
+      --allow-unauthenticated \
+      app
+    ```
+
+    ## Visitez l'URL
+    Assurez-vous de visiter l'URL *.run.app renvoyée par 
+    la commande.
+  notes:
+  - type: text
+    contents: |
+      Déployer sur Cloud Run
+  tabs:
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 360
+- slug: 06-edit-deploy
+  id: vfypuqhx2txe
+  type: challenge
+  title: Le flux de travail complet
+  assignment: |
+    Modifiez le titre «<h1>» de la page et déployez à nouveau 
+    l'application. Cela implique de créer et de pousser à nouveau 
+    l'image du conteneur.
+
+    Cette fois, il n'y a pas d'extraits faciles à copier et coller. 
+    Vous avez suffisamment appris pour que cela se produise, 
+    ne vous inquiétez pas!
+
+    ---
+
+    ## Conseils
+    Le shell est dans le deuxième onglet!
+
+    Si vous utilisez l'éditeur pour éditer **index.html**, 
+    appuyez sur la petite disquette pour l'enregistrer.
+
+    La variable d'environnement `$IMAGE` contient toujours 
+    l'URL de l'image du conteneur dans Artifact Registry. 
+    Vous en aurez besoin pour créer et étiqueter 
+    l'image du conteneur.
+
+    `gcloud run services` vous indique les commandes disponibles
+    pour répertorier, mettre à jour et déployer les services.
+  notes:
+  - type: text
+    contents: |
+      **Découvrez le flux de travail complet**
+
+      Plus d'extraits à copier et coller, les roues d'entraînement
+      se déclenchent.
+
+      1. Modifier la source
+      2. Créer et empaqueter l'image du conteneur
+      3. Déployer sur Cloud Run
+  tabs:
+  - title: Editeur
+    type: code
+    hostname: shell
+    path: /root/app
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 900
+- slug: 07-delete-dockerfile
+  id: mtcp8xdk2s6r
+  type: challenge
+  title: Supprimer le Dockerfile
+  assignment: |
+    Pour certains, ce sera très satisfaisant. Je ne choisis pas de camp.
+
+    Un flux de travail basé sur un conteneur est idéal si vous souhaitez 
+    contrôler quel fichier se retrouve dans l'image de conteneur et 
+    comment il y parvient.
+
+    Parfois, cette responsabilité est trop lourde et vous souhaitez que 
+    votre fournisseur transforme votre code source en une image de
+    conteneur.
+
+    ```
+    rm /root/app/Dockerfile
+    ```
+  notes:
+  - type: text
+    contents: |
+      Il est temps de supprimer ce Dockerfile maintenant.
+
+      Vous n'avez pas *besoin* d'être un expert en conteneurs 
+      pour être productif avec Cloud Run, et si vous en êtes un, 
+      Cloud Run ne vous gênera pas.
+  tabs:
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 360
+- slug: 08-source-based-deploy
+  id: cegsisw4mr7d
+  type: challenge
+  title: Déploiement basé sur la source
+  assignment: |
+    Si vous souhaitez que Cloud Run se charge de transformer 
+    votre code source en une image de conteneur, 
+    c'est très bien aussi.
+
+    Modifiez à nouveau le titre (ou vous ne pourrez pas faire 
+    la différence) et déployez à nouveau l'application.
+
+    ```
+    gcloud beta run deploy \
+      --source . \
+      app
+    ```
+  notes:
+  - type: text
+    contents: |
+      Préparez-vous pour un déploiement basé sur la source!
+  tabs:
+  - title: Editeur
+    type: code
+    hostname: shell
+    path: /root/app
+  - title: Shell
+    type: terminal
+    hostname: shell
+  difficulty: basic
+  timelimit: 360
+checksum: "9063748517890350627"
